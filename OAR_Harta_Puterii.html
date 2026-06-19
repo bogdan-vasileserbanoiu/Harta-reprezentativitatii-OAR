@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OAR — Harta Puterii de Decizie pe Filiale</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e8e8e8; min-height: 100vh; padding: 20px 24px; }
+  h1 { font-size: 22px; font-weight: 700; color: #f0f0f0; margin: 6px 0 8px; }
+  .eyebrow { font-size: 10px; letter-spacing: 4px; color: #c0392b; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #8a8f9e; line-height: 1.6; max-width: 700px; margin-bottom: 16px; }
+  .header { border-bottom: 1px solid #1e2035; padding-bottom: 16px; margin-bottom: 20px; }
+
+  /* TABS */
+  .tabs { display: flex; border-bottom: 1px solid #1e2035; margin-bottom: 20px; gap: 0; }
+  .tab-btn { padding: 8px 18px; cursor: pointer; font-size: 13px; background: transparent; border: none; border-bottom: 2px solid transparent; color: #8a8f9e; font-family: inherit; transition: color .15s, border-color .15s; }
+  .tab-btn.active { color: #f0f0f0; font-weight: 700; border-bottom-color: #c0392b; }
+  .tab-btn:hover { color: #ccc; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* PILLS */
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .pills span { font-size: 12px; color: #8a8f9e; }
+  .pill { padding: 4px 13px; border-radius: 20px; cursor: pointer; font-size: 12px; background: transparent; border: 1px solid #2a2d3a; color: #8a8f9e; font-family: inherit; transition: all .15s; }
+  .pill.active { background: #c0392b; border-color: #c0392b; color: #fff; }
+  .pill:hover:not(.active) { border-color: #555; color: #ccc; }
+
+  /* CARD */
+  .card { background: #13151f; border: 1px solid #1e2035; border-radius: 10px; padding: 16px 20px; }
+  .card + .card { margin-top: 10px; }
+  .label { font-size: 10px; color: #8a8f9e; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .val { font-size: 20px; font-weight: 700; color: #f0f0f0; }
+
+  /* CARD SELECTED */
+  .card-selected { border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 16px; }
+  @media(max-width:700px) { .card-selected { grid-template-columns: 1fr 1fr; } }
+
+  /* FILIALE LIST */
+  .filiale-list { display: flex; flex-direction: column; gap: 5px; }
+  .filiala-row { background: #13151f; border: 1px solid #1e2035; border-left: 3px solid #2a2d3a; border-radius: 8px; padding: 10px 14px; cursor: pointer; transition: background .15s, border-color .15s; }
+  .filiala-row:hover { background: #171a29; }
+  .filiala-row.sel { background: #1a1d2e; }
+  .filiala-inner { display: flex; align-items: center; gap: 12px; }
+  .filiala-rank { width: 20px; font-size: 10px; color: #8a8f9e; text-align: center; flex-shrink: 0; }
+  .filiala-name { min-width: 180px; flex-shrink: 0; }
+  .filiala-name .nm { font-size: 13px; font-weight: 600; color: #d0d5e0; }
+  .filiala-name .nm.sel { font-weight: 700; }
+  .filiala-name .sub { font-size: 10px; color: #8a8f9e; margin-top: 1px; }
+  .filiala-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; }
+  .bar-label { font-size: 9px; color: #8a8f9e; width: 52px; flex-shrink: 0; }
+  .bar-track { flex: 1; background: #1e2035; border-radius: 3px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+  .bar-val { font-size: 11px; color: #f0f0f0; min-width: 44px; text-align: right; }
+  .filiala-pct { text-align: right; min-width: 56px; flex-shrink: 0; }
+  .filiala-pct .big { font-size: 15px; font-weight: 700; }
+  .badge-v { font-size: 9px; color: #27ae60; font-weight: 700; }
+
+  /* SUMAR */
+  .sumar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+  @media(max-width:600px) { .sumar { grid-template-columns: repeat(2,1fr); } }
+
+  /* EVOLUTIE */
+  .evol-row { display: grid; grid-template-columns: 130px 1fr 1fr 1fr 2fr; gap: 14px; align-items: start; }
+  @media(max-width:700px) { .evol-row { grid-template-columns: 1fr 1fr; } }
+  .delta-pos { color: #27ae60; font-size: 11px; }
+  .delta-neg { color: #e74c3c; font-size: 11px; }
+  .evol-graf { display: flex; gap: 10px; align-items: flex-end; height: 90px; margin-top: 10px; }
+  .evol-graf-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .evol-graf-col .g-pct { font-size: 11px; color: #f0f0f0; font-weight: 700; }
+  .evol-graf-col .g-bar { width: 100%; border-radius: 4px 4px 0 0; opacity: .85; transition: height .3s; }
+  .evol-graf-col .g-an { font-size: 10px; color: #8a8f9e; }
+
+  /* COMPARATOR */
+  .compare-pills { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 18px; }
+  .comp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .comp-table th { text-align: center; padding: 8px 10px; font-weight: 600; border-bottom: 1px solid #2a2d3a; }
+  .comp-table th:first-child { text-align: left; }
+  .comp-table td { padding: 9px 10px; border-bottom: 1px solid #1e2035; text-align: center; vertical-align: top; }
+  .comp-table td:first-child { text-align: left; font-weight: 600; }
+  .comp-table tr:nth-child(even) td { background: #13151f; }
+  .comp-table tr:nth-child(odd) td { background: #111320; }
+  .td-main { font-weight: 700; color: #f0f0f0; }
+  .td-sub { font-size: 10px; color: #8a8f9e; }
+  .td-v { font-size: 9px; color: #27ae60; }
+
+  /* SURSE */
+  .sursa-row { display: grid; grid-template-columns: 62px 1fr 90px; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #1e2035; margin-bottom: 8px; align-items: start; }
+  .sursa-cod { font-size: 12px; font-weight: 700; color: #c0392b; }
+  .sursa-url { font-size: 10px; color: #8a8f9e; font-family: monospace; }
+  .sursa-desc { font-size: 11px; color: #c0c5d0; margin-top: 2px; }
+  .sursa-status { font-size: 9px; font-weight: 700; text-transform: uppercase; }
+  .sursa-status.ok { color: #27ae60; }
+  .sursa-status.est { color: #8a8f9e; }
+  .formula-box { background: #0f1117; padding: 10px 14px; border-radius: 6px; font-family: monospace; color: #27ae60; font-size: 13px; margin: 6px 0 10px; }
+  .sec-title { font-size: 14px; font-weight: 700; color: #c0392b; margin-bottom: 10px; }
+  .footer-note { margin-top: 14px; font-size: 10px; color: #3a3f50; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="eyebrow">OAR — Analiză Constituțională · v2.0</div>
+  <h1>Harta Puterii de Decizie pe Filiale OAR</h1>
+  <p class="subtitle">Calculul puterii individuale de vot · ROF OAR 2025 Art.10 (1 delegat/40 membri, min.1/județ) · Date verificate din conferințele teritoriale 2022–2026</p>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('harta')">Hartă Putere</button>
+  <button class="tab-btn" onclick="switchTab('evolutie')">Evoluție Mandate</button>
+  <button class="tab-btn" onclick="switchTab('comparator')">Comparator</button>
+  <button class="tab-btn" onclick="switchTab('surse')">Surse &amp; Metodologie</button>
+</div>
+
+<!-- TAB HARTA -->
+<div id="tab-harta" class="tab-panel active">
+  <div class="pills">
+    <span>Mandat:</span>
+    <button class="pill" id="mp-2014" onclick="setMandat('2014')">2014–2018</button>
+    <button class="pill active" id="mp-2022" onclick="setMandat('2022')">2022–2026</button>
+    <button class="pill" id="mp-2018" onclick="setMandat('2018')">2018–2022</button>
+    <button class="pill" id="mp-2026" onclick="setMandat('2026')">2026–2030</button>
+    &nbsp;&nbsp;
+    <span>Sortare:</span>
+    <button class="pill active" id="sp-putere" onclick="setSort('putere')">Putere %</button>
+    <button class="pill" id="sp-membri" onclick="setSort('membri')">Membri</button>
+    <button class="pill" id="sp-beta" onclick="setSort('beta')">β Individual</button>
+  </div>
+  <div id="card-sel"></div>
+  <div class="filiale-list" id="filiale-list"></div>
+  <div class="card sumar" id="sumar"></div>
+</div>
+
+<!-- TAB EVOLUTIE -->
+<div id="tab-evolutie" class="tab-panel">
+  <div class="pills" id="evol-pills"></div>
+  <div id="evol-card-sel" class="card" style="margin-bottom:14px; border-left:3px solid #c0392b;"></div>
+  <div id="evol-rows" style="display:flex;flex-direction:column;gap:8px;"></div>
+  <div class="card" style="margin-top:18px;">
+    <div class="label">Evoluție putere relativă în CN</div>
+    <div class="evol-graf" id="evol-graf"></div>
+  </div>
+</div>
+
+<!-- TAB COMPARATOR -->
+<div id="tab-comparator" class="tab-panel">
+  <p style="font-size:12px;color:#8a8f9e;margin-bottom:10px;">Selectați filialele de comparat (max. 5):</p>
+  <div class="compare-pills" id="compare-pills"></div>
+  <div style="overflow-x:auto;">
+    <table class="comp-table" id="comp-table"></table>
+  </div>
+  <div class="card" style="margin-top:18px;">
+    <div class="label" id="beta-label">β Individual (delegați per arhitect × 1000‰)</div>
+    <div class="pills" style="margin-top:10px;" id="beta-mandat-pills"></div>
+    <div id="beta-bars" style="display:flex;flex-direction:column;gap:6px;margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- TAB SURSE -->
+<div id="tab-surse" class="tab-panel">
+  <div class="card" style="margin-bottom:10px;">
+    <div class="sec-title">Cadrul normativ</div>
+    <div style="border-bottom:1px solid #1e2035;padding-bottom:10px;margin-bottom:10px;">
+      <div style="font-weight:600;color:#f0f0f0;font-size:13px;">ROF OAR 2025 (adoptat 14-15 iunie 2025)</div>
+      <div style="font-size:11px;color:#8a8f9e;margin-top:3px;">Art. 10 — regula de alocare delegați: 1 delegat/40 membri cotizanți, min. 1 delegat/județ. Descărcat de pe oar.archi/wp-content/uploads/2025/07/ROF-OAR-2025.pdf</div>
+    </div>
+    <div style="border-bottom:1px solid #1e2035;padding-bottom:10px;margin-bottom:10px;">
+      <div style="font-weight:600;color:#f0f0f0;font-size:13px;">Legea 184/2001</div>
+      <div style="font-size:11px;color:#8a8f9e;margin-top:3px;">Cadrul legal general de organizare și exercitare a profesiei de arhitect</div>
+    </div>
+    <div>
+      <div style="font-weight:600;color:#f0f0f0;font-size:13px;">Regulamentul-cadru filiale 2018</div>
+      <div style="font-size:11px;color:#8a8f9e;margin-top:3px;">Publicat în Monitorul Oficial nr. 697 din 9 august 2018</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:10px;">
+    <div class="sec-title">Surse date per filială</div>
+    <div id="surse-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">Metodologie &amp; Formule</div>
+    <div style="font-size:12px;color:#c0c5d0;line-height:1.8;">
+      <div class="formula-box">D(f) = max( ⌊ Nf / 40 ⌋ , Jf )</div>
+      <p style="margin-bottom:6px;"><strong style="color:#f0f0f0;">D(f)</strong> — delegați filialei f (ROF 2025, Art. 10). Nf = membri cotizanți; Jf = județe (min. garantat).</p>
+      <div class="formula-box">P(f) = D(f) / Σ D(i) × 100%</div>
+      <p style="margin-bottom:6px;"><strong style="color:#f0f0f0;">P(f)</strong> — puterea relativă a filialei în Conferința Națională.</p>
+      <div class="formula-box">β(f) = D(f) / Nf × 1000 [‰]</div>
+      <p style="margin-bottom:10px;"><strong style="color:#f0f0f0;">β(f)</strong> — puterea delegată per arhitect individual (Indice Banzhaf simplificat).</p>
+      <p style="color:#8a8f9e;margin-bottom:6px;">Delegații reali au prioritate față de calculul formulei acolo unde sunt documentați oficial (marcați ✓). Datele estimate urmează tendința de creștere documentată.</p>
+      <p style="color:#8a8f9e;"><strong style="color:#c0392b;">Limitare:</strong> numărul de membri cotizanți (Nf) diferă de membrii înscriși total. Acolo unde avem delegați reali verificați (ex. Iași 2022: 27 del. → ~1080 cotizanți), aceştia sunt folosiți ca ancoră de calibrare.</p>
+    </div>
+  </div>
+</div>
+
+<div class="footer-note">✓ = date confirmate din documente oficiale OAR · rest = estimări calibrate · β = putere Banzhaf simplificată · ROF OAR 2025 Art.10</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATE
+// ═══════════════════════════════════════════════════════════
+const MANDATE = [
+  { id:"2014", label:"2014–2018", an:2014, culoare:"#4a5568" },
+  { id:"2018", label:"2018–2022", an:2018, culoare:"#2d6a4f" },
+  { id:"2022", label:"2022–2026", an:2022, culoare:"#1a6c8c" },
+  { id:"2026", label:"2026–2030", an:2026, culoare:"#7b2d8b" },
+];
+
+const DATE_FILIALE = [
+  { id:"bucuresti", name:"București", judete:1, culoare:"#c0392b",
+    descriere:"Cea mai mare filială OAR — capitala și sectoarele 1–6",
+    mandate:{ "2014":{membri:1600,sursa:"estimare proporțională față de 2018",delegatiReali:null},
+               "2018":{membri:1800,sursa:"[B-D] ~1800 cotiz. 2018, estimare din cvorum CT2018",delegatiReali:null},
+               "2022":{membri:2367,sursa:"[B22] oar-bucuresti.ro — cvorum CT 21.05.2022: maj.simpl=1185 din 2367",delegatiReali:59},
+               "2026":{membri:3113,sursa:"[B26] oar-bucuresti.ro — cvorum CT 16.05.2026: maj.simpl=1558 din 3113",delegatiReali:77} }},
+  { id:"iasi", name:"Iași", judete:1, culoare:"#27ae60",
+    descriere:"Filială universitară; cea mai importantă filială din Moldova",
+    mandate:{ "2014":{membri:380,sursa:"estimare din tendința de creștere",delegatiReali:null},
+               "2018":{membri:450,sursa:"[I18] oar-iasi.ro comuncat 2018 — date aproximative",delegatiReali:null},
+               "2022":{membri:1080,sursa:"[I22] oar-iasi.ro/2022 — 27 delegați × 40 = ~1080 membri cotiz.",delegatiReali:27},
+               "2026":{membri:1160,sursa:"[I25] 29 delegați CNEx 2025 × 40 = ~1160; [AC] 585 înscriși activi",delegatiReali:29} }},
+  { id:"transilvania", name:"Transilvania", judete:3, culoare:"#e67e22",
+    descriere:"Cluj, Mureș, Bistrița-Năsăud — filială mare cu centru universitar Cluj",
+    mandate:{ "2014":{membri:700,sursa:"estimare proporțională",delegatiReali:null},
+               "2018":{membri:900,sursa:"estimare din date publice filiale",delegatiReali:null},
+               "2022":{membri:1150,sursa:"estimare din proporția istorică față de București",delegatiReali:null},
+               "2026":{membri:1300,sursa:"estimare curentă — filială în creștere, conferință mai 2026",delegatiReali:null} }},
+  { id:"banat", name:"Banat", judete:3, culoare:"#f39c12",
+    descriere:"Timiș, Caraș-Severin, Mehedinți — centru universitar Timișoara",
+    mandate:{ "2014":{membri:500,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:620,sursa:"[CN18] conferință teritorială Timișoara",delegatiReali:null},
+               "2022":{membri:760,sursa:"estimare din structura CN 2022",delegatiReali:null},
+               "2026":{membri:820,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"brasov", name:"Brașov–Covasna–Harghita", judete:3, culoare:"#16a085",
+    descriere:"Trei județe — filială activă în sesizări profesionale",
+    mandate:{ "2014":{membri:350,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:430,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:520,sursa:"estimare; [BCH] oar-bvcvhr.ro",delegatiReali:null},
+               "2026":{membri:570,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"oltenia", name:"Oltenia", judete:5, culoare:"#2980b9",
+    descriere:"Dolj, Gorj, Olt, Vâlcea, Teleorman parțial — 5 județe, densitate mică",
+    mandate:{ "2014":{membri:320,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:390,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:480,sursa:"estimare din structura CN",delegatiReali:null},
+               "2026":{membri:510,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"dobrogea", name:"Dobrogea", judete:2, culoare:"#8e44ad",
+    descriere:"Constanța, Tulcea — filială cu creștere din boom imobiliar litoral",
+    mandate:{ "2014":{membri:280,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:360,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:460,sursa:"estimare; conferința teritorială 28.03.2025",delegatiReali:null},
+               "2026":{membri:510,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"nord-vest", name:"Nord-Vest", judete:4, culoare:"#2c3e50",
+    descriere:"Baia Mare, Zalău, Oradea parțial — 4 județe nordice",
+    mandate:{ "2014":{membri:260,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:320,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:400,sursa:"estimare; conferința 28.03.2025 [cal. OAR 2025]",delegatiReali:null},
+               "2026":{membri:440,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"dunarea-de-jos", name:"Dunărea de Jos", judete:3, culoare:"#d35400",
+    descriere:"Galați, Brăila, Vrancea parțial",
+    mandate:{ "2014":{membri:240,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:290,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:370,sursa:"estimare; conf. 21.02.2025",delegatiReali:null},
+               "2026":{membri:410,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"bacau-neamt", name:"Bacău–Neamț", judete:2, culoare:"#c0392b",
+    descriere:"Bacău și Neamț — filială cu activitate RAM Moldova",
+    mandate:{ "2014":{membri:210,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:260,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:340,sursa:"estimare din rapoarte RAM Moldova",delegatiReali:null},
+               "2026":{membri:380,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"nord-est", name:"Nord-Est", judete:4, culoare:"#7f8c8d",
+    descriere:"Suceava, Botoșani, Vaslui parțial — 4 județe nordice",
+    mandate:{ "2014":{membri:190,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:240,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:320,sursa:"estimare; [24] oar-nordest.ro",delegatiReali:null},
+               "2026":{membri:360,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"muntenia", name:"Muntenia", judete:5, culoare:"#1abc9c",
+    descriere:"Argeș, Dâmbovița, Prahova parțial, Ialomița, Călărași parțial",
+    mandate:{ "2014":{membri:200,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:250,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:320,sursa:"estimare",delegatiReali:null},
+               "2026":{membri:360,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"bihor", name:"Bihor", judete:1, culoare:"#e74c3c",
+    descriere:"Oradea — filială monojudețeană cu activitate intens europeană",
+    mandate:{ "2014":{membri:180,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:220,sursa:"estimare; [CN18] 2 locuri CN",delegatiReali:null},
+               "2022":{membri:280,sursa:"estimare; conf. 31.03.2025",delegatiReali:null},
+               "2026":{membri:310,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"sibiu-valcea", name:"Sibiu–Vâlcea", judete:2, culoare:"#3498db",
+    descriere:"Sibiu și Vâlcea — tablou teritorial publicat conform ROF 2018",
+    mandate:{ "2014":{membri:170,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:210,sursa:"[54] oarsbvl.ro tablou teritorial art.41 ROF 2018",delegatiReali:null},
+               "2022":{membri:270,sursa:"estimare",delegatiReali:null},
+               "2026":{membri:300,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"arad", name:"Arad", judete:1, culoare:"#9b59b6",
+    descriere:"Arad — filială monojudețeană; conf. teritorială 28.03.2025",
+    mandate:{ "2014":{membri:140,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:175,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:230,sursa:"estimare; conf. Arad 28.03.2025",delegatiReali:null},
+               "2026":{membri:260,sursa:"estimare curentă",delegatiReali:null} }},
+  { id:"alba", name:"Alba", judete:1, culoare:"#e91e63",
+    descriere:"Alba Iulia — filială monojudețeană; președinte arh. Iulian Ilie Mireapl",
+    mandate:{ "2014":{membri:110,sursa:"estimare",delegatiReali:null},
+               "2018":{membri:140,sursa:"estimare",delegatiReali:null},
+               "2022":{membri:185,sursa:"estimare; [40] oar.archi/filiale-teritoriale 2025",delegatiReali:null},
+               "2026":{membri:210,sursa:"estimare curentă",delegatiReali:null} }},
+];
+
+const SURSE = [
+  ["[B22]","oar-bucuresti.ro/anunturi/2022/04/07","Filiala București — 2367 membri cu cotizație achitată, cvorum CT 21.05.2022","VERIFICAT"],
+  ["[B26]","oar-bucuresti.ro/anunturi/2026/04/01","Filiala București — 3113 membri, cvorum CT 16.05.2026. 77 delegați calculați.","VERIFICAT"],
+  ["[B-D]","oar-bucuresti.ro/despre/","OAR București — 4592 membri totali (incl. stagiari, fără dr. semn.)","verificat — total, nu cotizanți"],
+  ["[I22]","oar-iasi.ro/2022/04 comuncat CT 2022","Filiala Iași — 27 delegați la CN 2022. Calcul invers: 27×40 = ~1080 membri cotizanți.","VERIFICAT (delegați reali)"],
+  ["[I25]","oar-iasi.ro/2025 conferință teritorială","Filiala Iași — 29 delegați + 2 supleanți pentru CNEx 14-15 iunie 2025","VERIFICAT (delegați reali)"],
+  ["[I26]","oar-iasi.ro/2026 comuncat CT 2026","Filiala Iași — conferință teritorială mai 2026, delegați CN 20-21 iunie 2026","menționat, nr. neconfirmat"],
+  ["[AC]","agendaconstructiilor.ro/oar-iasi","OAR Iași — 585 membri activi (date recente)","estimare de referință"],
+  ["[BCH]","oar-bvcvhr.ro","Brașov-Covasna-Harghita — date generale filială, 3 județe","estimare"],
+  ["[CN18]","arenaconstruct.ro/echipa-oar-2018","Rezultate alegeri CN 2018-2022 pe filiale — structura Consiliului Național","structură confirmată"],
+  ["[CNEx25]","oar.archi/conferinta-nationala-2025","Conferința Națională Extraordinară 14-15 iunie 2025 — documente ROF","confirmat"],
+  ["[ROF]","oar.archi/wp-content/uploads/2025/07/ROF-OAR-2025.pdf","Regulament OAR 2025 — sursa primară pentru formula de calcul","SURSĂ PRIMARĂ"],
+];
+
+// ═══════════════════════════════════════════════════════════
+// LOGICĂ
+// ═══════════════════════════════════════════════════════════
+const REGULA = 40;
+function calcDel(n, j) { return Math.max(Math.floor(n / REGULA), j); }
+
+function calcMandat(mandatId) {
+  const filiale = DATE_FILIALE.map(f => {
+    const d = f.mandate[mandatId]; if (!d) return null;
+    const delegati = d.delegatiReali !== null ? d.delegatiReali : calcDel(d.membri, f.judete);
+    return { ...f, membri: d.membri, delegati, sursa: d.sursa, verificat: d.delegatiReali !== null };
+  }).filter(Boolean);
+  const totalD = filiale.reduce((s, f) => s + f.delegati, 0);
+  const totalN = filiale.reduce((s, f) => s + f.membri, 0);
+  return filiale.map(f => ({
+    ...f,
+    putereRelativa: f.delegati / totalD * 100,
+    betaIndividual: f.delegati / f.membri,
+    totalD, totalN
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let mandatSel = "2022";
+let sortBy = "putere";
+let filialaSel = "iasi";
+let compareFiliale = ["iasi", "bucuresti", "transilvania"];
+let betaMandatSel = "2022";
+
+// ═══════════════════════════════════════════════════════════
+// RENDER HELPERS
+// ═══════════════════════════════════════════════════════════
+function normBeta(val, filiale) {
+  const vals = filiale.map(f => f.betaIndividual);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  return mx === mn ? 50 : (val - mn) / (mx - mn) * 100;
+}
+
+function renderHarta() {
+  let filiale = calcMandat(mandatSel);
+  const maxD = Math.max(...filiale.map(f => f.delegati));
+
+  if (sortBy === "putere") filiale.sort((a,b) => b.putereRelativa - a.putereRelativa);
+  else if (sortBy === "membri") filiale.sort((a,b) => b.membri - a.membri);
+  else filiale.sort((a,b) => b.betaIndividual - a.betaIndividual);
+
+  const sel = filiale.find(f => f.id === filialaSel) || filiale[0];
+
+  // Card selected
+  document.getElementById("card-sel").innerHTML = `
+    <div class="card-selected card" style="border-left:3px solid ${sel.culoare}; background:#1a1d2e;">
+      <div>
+        <div class="label">Filială selectată</div>
+        <div style="font-size:16px;font-weight:700;color:${sel.culoare}">${sel.name}</div>
+        <div style="font-size:11px;color:#8a8f9e;margin-top:2px;">${sel.judete} județ${sel.judete>1?"e":""} · ${sel.descriere}</div>
+      </div>
+      <div><div class="label">Membri</div><div class="val">${sel.membri.toLocaleString("ro-RO")}</div>${sel.verificat?'<span class="badge-v">✓ verificat</span>':''}</div>
+      <div><div class="label">Delegați CN</div><div class="val">${sel.delegati}</div>${sel.verificat?'<div style="font-size:11px;color:#27ae60">confirmat oficial</div>':''}</div>
+      <div><div class="label">Putere relativă</div><div class="val" style="color:${sel.culoare}">${sel.putereRelativa.toFixed(2)}%</div></div>
+      <div><div class="label">β Individual</div><div class="val" style="color:#e67e22">${(sel.betaIndividual*1000).toFixed(2)}‰</div><div style="font-size:10px;color:#8a8f9e">delegați/arhitect</div></div>
+    </div>`;
+
+  // List
+  let html = "";
+  filiale.forEach((f, i) => {
+    const nb = normBeta(f.betaIndividual, filiale);
+    const isSel = f.id === filialaSel;
+    html += `<div class="filiala-row${isSel?" sel":""}" style="border-left-color:${isSel?f.culoare:"#2a2d3a"}" onclick="selectFiliale('${f.id}')">
+      <div class="filiala-inner">
+        <div class="filiala-rank">${i+1}</div>
+        <div class="filiala-name">
+          <div class="nm${isSel?" sel":""}" style="color:${isSel?f.culoare:"#d0d5e0"}">${f.name}${f.verificat?' <span style="color:#27ae60;font-size:9px">✓</span>':''}</div>
+          <div class="sub">${f.judete} județ${f.judete>1?"e":""} · ${f.membri.toLocaleString("ro-RO")} m.</div>
+        </div>
+        <div class="filiala-bars">
+          <div class="bar-row">
+            <div class="bar-label">delegați</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${f.delegati/maxD*100}%;background:${f.culoare}"></div></div>
+            <div class="bar-val">${f.delegati}</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">β Banzhaf</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${nb}%;background:linear-gradient(90deg,#27ae60,#f39c12)"></div></div>
+            <div class="bar-val">${(f.betaIndividual*1000).toFixed(1)}‰</div>
+          </div>
+        </div>
+        <div class="filiala-pct"><div class="big" style="color:${f.culoare}">${f.putereRelativa.toFixed(1)}%</div></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById("filiale-list").innerHTML = html;
+
+  // Sumar
+  const totalD = filiale[0].totalD, totalN = filiale[0].totalN;
+  document.getElementById("sumar").innerHTML = `
+    <div><div class="label">Total membri (est.)</div><div class="val" style="font-size:16px">${totalN.toLocaleString("ro-RO")}</div></div>
+    <div><div class="label">Total delegați CN</div><div class="val" style="font-size:16px">${totalD}</div></div>
+    <div><div class="label">Filiale</div><div class="val" style="font-size:16px">${filiale.length}</div></div>
+    <div><div class="label">Regulă alocare</div><div style="font-size:13px;font-weight:700;color:#f0f0f0">1 del./40 m. min.1/jud.</div></div>`;
+}
+
+function renderEvolutie() {
+  // Pills filiale
+  let pills = "";
+  DATE_FILIALE.forEach(f => {
+    pills += `<button class="pill${f.id===filialaSel?" active":""}" style="${f.id===filialaSel?"border-color:"+f.culoare+";color:"+f.culoare:""};" onclick="setEvolFiliale('${f.id}')">${f.name}</button>`;
+  });
+  document.getElementById("evol-pills").innerHTML = '<span>Filială:</span>' + pills;
+
+  const fdef = DATE_FILIALE.find(f => f.id === filialaSel);
+  document.getElementById("evol-card-sel").innerHTML = `
+    <div style="font-size:15px;font-weight:700;color:${fdef.culoare};margin-bottom:4px">${fdef.name}</div>
+    <div style="font-size:12px;color:#8a8f9e">${fdef.judete} județ${fdef.judete>1?"e":""} · ${fdef.descriere}</div>`;
+  document.getElementById("evol-card-sel").style.borderLeftColor = fdef.culoare;
+
+  let rows = ""; let grafBars = "";
+  let prev = null;
+  MANDATE.forEach((m, i) => {
+    const filiale = calcMandat(m.id);
+    const f = filiale.find(x => x.id === filialaSel);
+    if (!f) return;
+    const raw = fdef.mandate[m.id];
+    const deltaN = prev ? f.membri - prev.membri : 0;
+    const deltaP = prev ? f.putereRelativa - prev.putereRelativa : 0;
+
+    rows += `<div class="card evol-row">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:${m.culoare}">${m.label}</div>
+        <div style="font-size:10px;color:#8a8f9e">Conferință ${m.an}</div>
+      </div>
+      <div>
+        <div class="label">Membri</div>
+        <div style="font-size:18px;font-weight:700;color:#f0f0f0">${f.membri.toLocaleString("ro-RO")}</div>
+        ${prev?`<div class="${deltaN>=0?"delta-pos":"delta-neg"}">${deltaN>=0?"↑":"↓"} ${Math.abs(deltaN)}</div>`:""}
+      </div>
+      <div>
+        <div class="label">Delegați CN</div>
+        <div style="font-size:18px;font-weight:700;color:#f0f0f0">${f.delegati}${f.verificat?' <span style="color:#27ae60;font-size:10px">✓</span>':''}</div>
+      </div>
+      <div>
+        <div class="label">Putere %</div>
+        <div style="font-size:18px;font-weight:700;color:${m.culoare}">${f.putereRelativa.toFixed(2)}%</div>
+        ${prev?`<div class="${deltaP>=0?"delta-pos":"delta-neg"}">${deltaP>=0?"↑":"↓"} ${Math.abs(deltaP).toFixed(2)}pp</div>`:""}
+      </div>
+      <div>
+        <div class="label">Sursă</div>
+        <div style="font-size:10px;color:#8a8f9e;line-height:1.5">${raw.sursa}</div>
+      </div>
+    </div>`;
+
+    const barH = Math.max(4, f.putereRelativa / 25 * 80);
+    grafBars += `<div class="evol-graf-col">
+      <div class="g-pct">${f.putereRelativa.toFixed(1)}%</div>
+      <div class="g-bar" style="background:${m.culoare};height:${barH}px"></div>
+      <div class="g-an">${m.an}</div>
+    </div>`;
+
+    prev = f;
+  });
+  document.getElementById("evol-rows").innerHTML = rows;
+  document.getElementById("evol-graf").innerHTML = grafBars;
+}
+
+function renderComparator() {
+  // Compare pills
+  let pills = "";
+  DATE_FILIALE.forEach(f => {
+    const active = compareFiliale.includes(f.id);
+    pills += `<button class="pill${active?" active":""}" style="${active?"border-color:"+f.culoare+";color:"+f.culoare+";background:"+f.culoare+"22":""}" onclick="toggleCompare('${f.id}')">${f.name}</button>`;
+  });
+  document.getElementById("compare-pills").innerHTML = pills;
+
+  // Table
+  let thead = `<thead><tr><th style="color:#8a8f9e">Filială</th>`;
+  MANDATE.forEach(m => { thead += `<th style="color:${m.culoare}">${m.label}</th>`; });
+  thead += "</tr></thead>";
+
+  let tbody = "<tbody>";
+  compareFiliale.forEach(fid => {
+    const fdef = DATE_FILIALE.find(f => f.id === fid); if (!fdef) return;
+    tbody += `<tr><td style="color:${fdef.culoare}">${fdef.name}</td>`;
+    MANDATE.forEach(m => {
+      const filiale = calcMandat(m.id);
+      const f = filiale.find(x => x.id === fid);
+      if (!f) { tbody += `<td style="color:#4a5568">—</td>`; return; }
+      tbody += `<td>
+        <div class="td-main">${f.putereRelativa.toFixed(1)}%</div>
+        <div class="td-sub">${f.delegati} del.</div>
+        <div class="td-sub">${f.membri.toLocaleString("ro-RO")} m.</div>
+        ${f.verificat?'<div class="td-v">✓ oficial</div>':""}
+      </td>`;
+    });
+    tbody += "</tr>";
+  });
+  tbody += "</tbody>";
+  document.getElementById("comp-table").innerHTML = thead + tbody;
+
+  // Beta mandat pills
+  let bpills = "";
+  MANDATE.forEach(m => {
+    bpills += `<button class="pill${m.id===betaMandatSel?" active":""}" onclick="setBetaMandat('${m.id}')">${m.an}</button>`;
+  });
+  document.getElementById("beta-mandat-pills").innerHTML = bpills;
+  document.getElementById("beta-label").textContent = `β Individual (delegați per arhitect × 1000‰) — ${MANDATE.find(m=>m.id===betaMandatSel)?.label}`;
+
+  // Beta bars
+  const filiale = calcMandat(betaMandatSel);
+  let bbars = "";
+  compareFiliale.forEach(fid => {
+    const f = filiale.find(x => x.id === fid);
+    const fdef = DATE_FILIALE.find(x => x.id === fid);
+    if (!f || !fdef) return;
+    const nb = normBeta(f.betaIndividual, filiale);
+    bbars += `<div class="bar-row">
+      <div style="min-width:170px;font-size:12px;color:${fdef.culoare};font-weight:600">${fdef.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${nb}%;background:${fdef.culoare}"></div></div>
+      <div class="bar-val" style="min-width:50px">${(f.betaIndividual*1000).toFixed(2)}‰</div>
+    </div>`;
+  });
+  document.getElementById("beta-bars").innerHTML = bbars;
+}
+
+function renderSurse() {
+  let html = "";
+  SURSE.forEach(([cod,url,desc,status]) => {
+    const isV = status.startsWith("VERIFICAT") || status === "SURSĂ PRIMARĂ";
+    html += `<div class="sursa-row">
+      <div class="sursa-cod">${cod}</div>
+      <div><div class="sursa-url">${url}</div><div class="sursa-desc">${desc}</div></div>
+      <div class="sursa-status ${isV?"ok":"est"}">${status}</div>
+    </div>`;
+  });
+  document.getElementById("surse-list").innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll(".tab-btn").forEach((b,i) => {
+    const names = ["harta","evolutie","comparator","surse"];
+    b.classList.toggle("active", names[i] === name);
+  });
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  document.getElementById("tab-"+name).classList.add("active");
+  if (name==="evolutie") renderEvolutie();
+  if (name==="comparator") renderComparator();
+  if (name==="surse") renderSurse();
+}
+
+function setMandat(id) {
+  mandatSel = id;
+  document.querySelectorAll("[id^='mp-']").forEach(b => b.classList.remove("active"));
+  document.getElementById("mp-"+id).classList.add("active");
+  renderHarta();
+}
+
+function setSort(s) {
+  sortBy = s;
+  document.querySelectorAll("[id^='sp-']").forEach(b => b.classList.remove("active"));
+  document.getElementById("sp-"+s).classList.add("active");
+  renderHarta();
+}
+
+function selectFiliale(id) { filialaSel = id; renderHarta(); }
+
+function setEvolFiliale(id) { filialaSel = id; renderEvolutie(); }
+
+function toggleCompare(id) {
+  if (compareFiliale.includes(id)) { compareFiliale = compareFiliale.filter(x=>x!==id); }
+  else if (compareFiliale.length < 5) { compareFiliale.push(id); }
+  renderComparator();
+}
+
+function setBetaMandat(id) { betaMandatSel = id; renderComparator(); }
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+renderHarta();
+renderSurse();
+</script>
+</body>
+</html>
